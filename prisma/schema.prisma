@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     Task[]
+}
+
+model Volunteer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reviews   Review[]
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reviews        Review[]
+}
+
+model Review {
+  id          String    @id @default(uuid())
+  rating      Int
+  comment     String?
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id])
+  volunteerId String
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+model IngestionRun {
+  id               String          @id @default(uuid())
+  sourceHash       String          @unique
+  status           IngestionStatus @default(PENDING)
+  rowsProcessed    Int             @default(0)
+  rowsSkipped      Int             @default(0)
+  checkpointOffset Int             @default(0)
+  startedAt        DateTime        @default(now())
+  finishedAt       DateTime?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String   // 'ORG' or 'VOLUNTEER'
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, role])
+}
