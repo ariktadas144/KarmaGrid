@@ -1,9 +1,5 @@
-const pino = require('pino');
 const pinoHttp = require('pino-http');
-
-const logger = pino({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
-});
+const logger = require('../utils/logger');
 
 const requestLogger = pinoHttp({
   logger,
