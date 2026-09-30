@@ -25,17 +25,41 @@ model Volunteer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   reviews   Review[]
+  registrations Registration[]
+}
+
+enum TaskStatus {
+  OPEN
+  CANCELLED
+  COMPLETED
 }
 
 model Task {
   id             String       @id @default(uuid())
   title          String
   description    String
+  size           Int
+  location       String
+  date           DateTime
+  category       String
+  status         TaskStatus   @default(OPEN)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   reviews        Review[]
+  registrations  Registration[]
+}
+
+model Registration {
+  id           String    @id @default(uuid())
+  taskId       String
+  task         Task      @relation(fields: [taskId], references: [id])
+  volunteerId  String
+  volunteer    Volunteer @relation(fields: [volunteerId], references: [id])
+  registeredAt DateTime  @default(now())
+
+  @@unique([taskId, volunteerId])
 }
 
 model Review {
