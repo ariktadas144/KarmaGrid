@@ -10,13 +10,17 @@ const refreshTokenRepo = require('../repositories/refreshToken.repo');
 const getRepoByRole = (role) => {
   if (role === constants.ROLES.ORGANIZATION) return organizationRepo;
   if (role === constants.ROLES.VOLUNTEER) return volunteerRepo;
-  throw new Error('Invalid role');
+  const err = new Error('Invalid role');
+  err.status = 400;
+  throw err;
 };
 
 const getSecretByRole = (role) => {
   if (role === constants.ROLES.ORGANIZATION) return env.JWT_ORG_SECRET;
   if (role === constants.ROLES.VOLUNTEER) return env.JWT_VOL_SECRET;
-  throw new Error('Invalid role');
+  const err = new Error('Invalid role');
+  err.status = 400;
+  throw err;
 };
 
 // Hash refresh tokens before storage to mitigate impact of database leaks
@@ -26,7 +30,7 @@ const hashToken = (token) => {
 
 const signup = async ({ name, email, password, role }) => {
   const repo = getRepoByRole(role);
-  
+
   const existingUser = await repo.findByEmail(email);
   if (existingUser) {
     const err = new Error('Email already in use');
@@ -47,7 +51,7 @@ const signup = async ({ name, email, password, role }) => {
 
 const signin = async ({ email, password, role }) => {
   const repo = getRepoByRole(role);
-  
+
   const user = await repo.findByEmail(email);
   if (!user) {
     const err = new Error('Invalid email or password');
@@ -64,12 +68,12 @@ const signin = async ({ email, password, role }) => {
 
   const secret = getSecretByRole(role);
   const expiresIn = role === constants.ROLES.ORGANIZATION ? constants.JWT_EXPIRY.ORG : constants.JWT_EXPIRY.VOLUNTEER;
-  
-  const accessToken = jwt.sign({ id: user.id, role }, secret, { expiresIn: '15m' });
-  
+
+  const accessToken = jwt.sign({ id: user.id, role }, secret, { expiresIn });
+
   const refreshToken = crypto.randomBytes(40).toString('hex');
   const tokenHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await refreshTokenRepo.create({
     userId: user.id,
@@ -110,9 +114,9 @@ const refresh = async ({ refreshToken }) => {
 
   const secret = getSecretByRole(role);
   const expiresIn = role === constants.ROLES.ORGANIZATION ? constants.JWT_EXPIRY.ORG : constants.JWT_EXPIRY.VOLUNTEER;
-  
-  const newAccessToken = jwt.sign({ id: tokenRecord.userId, role }, secret, { expiresIn: '15m' });
-  
+
+  const newAccessToken = jwt.sign({ id: tokenRecord.userId, role }, secret, { expiresIn });
+
   const newRefreshToken = crypto.randomBytes(40).toString('hex');
   const newTokenHash = hashToken(newRefreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -131,7 +135,7 @@ const logout = async ({ refreshToken }) => {
   if (!refreshToken) return;
   const tokenHash = hashToken(refreshToken);
   const tokenRecord = await refreshTokenRepo.findByTokenHash(tokenHash);
-  
+
   if (tokenRecord) {
     await refreshTokenRepo.revoke(tokenHash);
   }
